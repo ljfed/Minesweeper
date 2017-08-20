@@ -67,35 +67,45 @@ class Game():
     def __init__(self):
         self.gameExit = False
         self.numMines = 10
-        self.flagCounter = self.numMines
-        self.leftClickCounter = 0
         self.timerSeconds = 0
         
         self.reset()
         self.game_loop()
     
-#    def game_start(self):
-#        self.grid = np.zeros((gridHeight, gridWidth))
-#        self.flagGrid = np.zeros((gridHeight, gridWidth))
-#        self.flagCounter = self.numMines
-#        self.generate_board()
-#        self.startTicks = pygame.time.get_ticks()
-#    def game_end(self):
-#        #self.reveal_everythin()
-#        #self.stop_timer()
-#        return
-    
     def reset(self):
         self.grid = np.zeros((gridHeight, gridWidth))
         self.flagGrid = np.zeros((gridHeight, gridWidth))
         self.flagCounter = self.numMines
-        self.generate_board()
         self.leftClickCounter = 0
         self.startTicks = pygame.time.get_ticks()
+        self.numTilesRevealed = 0
+        self.gameOver = False
         
-    def generate_board(self):
-        np.put(self.grid, np.random.choice(range(gridWidth*gridHeight), 
-                                           self.numMines, replace=False), 1)
+    def generate_board(self, row, column):
+#        generate board --> first click can't be a mine
+        linearSelection = column + row*gridWidth #convert 2d coordinates into linear coordinate
+       
+#        while True:
+#            values = np.random.choice(range(gridWidth*gridHeight), self.numMines, replace=False)
+#            if linearSelection not in values:
+#                break
+        
+            
+        values = np.random.choice(range(gridWidth*gridHeight), self.numMines, replace=False)
+#        make sure first click isn't a mine
+        if linearSelection in values:
+            values = list(values)
+            freeTiles = []
+            for tile in range(gridWidth * gridHeight):
+                if tile not in values:
+                    freeTiles.append(tile)
+            values.append(np.random.choice(freeTiles))
+            values.remove(linearSelection)
+        
+
+#       np.put(self.grid, np.random.choice(range(gridWidth*gridHeight), self.numMines, replace=False), 1)
+
+        np.put(self.grid, values, 1)
 #        np.put(input grid, [locations to change - can reference as if grid was a 1 dimensional array], number to change location to)
 #        np.random.choice(random numbers chosen from elements of this input, num replacements to make, false makes numbers different each time)
          
@@ -105,11 +115,13 @@ class Game():
         self.grid = conv    
         
     def render(self):
-        self.timerSeconds = (pygame.time.get_ticks() - self.startTicks)/1000
+        if not self.gameOver:
+            self.timerSeconds = (pygame.time.get_ticks() - self.startTicks)/1000
         gameDisplay.fill(colors[7]) 
         pygame.draw.rect(gameDisplay, colors[0], (0, 0, displayWidth, barHeight))    
         message_to_screen('{}'.format(self.flagCounter), colors[3], 5, 5, 'topleft')
-        message_to_screen('{:.0f}'.format(self.timerSeconds), colors[3], displayWidth-5, 5, 'topright')
+        message_to_screen('{:.0f}'.format(self.timerSeconds), colors[3], 
+                          displayWidth-5, 5, 'topright')
         
         for row in range(gridHeight):
             for column in range(gridWidth):
@@ -129,7 +141,27 @@ class Game():
                                                       blockWidth, blockWidth))
                 
     def reveal(self, row, column):
-        self.flagGrid[row, column] = 1
+        if self.flagGrid[row, column] == 0: #make sure tile isn't a flag and isn't revealed
+            if self.grid[row, column] == 9:
+                print('DEFEAT')
+                self.gameOver = True
+                self.flagGrid[row, column] = 1
+            elif self.grid[row, column] == 0:
+#                reveal all surrounding zeros
+                
+                for sCol in range(-1, 2):
+                    for sRow in range(-1, 2):
+                        if row+sRow < 0 or row+sRow > gridHeight-1 or column+sCol < 0 or column+sCol > gridWidth-1:
+                            continue
+                        if self.flagGrid[row+sRow, column+sCol] == 0:
+                            self.flagGrid[row+sRow, column+sCol] = 1
+                            self.numTilesRevealed += 1
+                    
+            else:
+                self.flagGrid[row, column] = 1
+                self.numTilesRevealed += 1
+            
+        self.check_victory()
         
     def reveal_everything(self):
         for row in range(gridHeight):
@@ -138,10 +170,18 @@ class Game():
                     self.flagGrid[row, column] = 2
                 else:
                     self.flagGrid[row, column] = 1
+        self.flagCounter = 0
+        
+    def check_victory(self):
+        print(self.numTilesRevealed)
+        if self.numTilesRevealed == gridWidth*gridHeight - self.numMines:
+            print('VICTORY')
+            self.gameOver = True
         
     def left_click(self, row, column):
         print('Left Click At: {}, {}'.format(row, column)) 
         if self.leftClickCounter == 0: #first click
+            self.generate_board(row, column)
             self.reveal(row, column)
         else:
             self.reveal(row, column)
@@ -149,8 +189,12 @@ class Game():
             
     def right_click(self, row, column):
         print('Right Click At: {}, {}'.format(row, column))
-        self.flagGrid[row, column] = 2
-        self.flagCounter -= 1
+        if self.flagGrid[row, column] == 2:
+            self.flagGrid[row, column] = 0
+            self.flagCounter += 1
+        elif self.flagGrid[row, column] == 0:
+            self.flagGrid[row, column] =2
+            self.flagCounter -= 1
         
     def middle_click(self, row, column):
         print('Middle Click At: {}, {}'.format(row, column))
