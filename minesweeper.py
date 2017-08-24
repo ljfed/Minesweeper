@@ -19,7 +19,8 @@ from scipy import signal
 pygame.init()
 
 white = (255, 255, 255)
-flagColor = (240, 23, 175)
+#flagColor = (240, 23, 175)
+flagColor = (255, 150, 14)
 
 colors = {0: (192, 192, 192), #gray
           1: (0, 0, 255), #blue
@@ -84,13 +85,7 @@ class Game():
     def generate_board(self, row, column):
 #        generate board --> first click can't be a mine
         linearSelection = column + row*gridWidth #convert 2d coordinates into linear coordinate
-       
-#        while True:
-#            values = np.random.choice(range(gridWidth*gridHeight), self.numMines, replace=False)
-#            if linearSelection not in values:
-#                break
         
-            
         values = np.random.choice(range(gridWidth*gridHeight), self.numMines, replace=False)
 #        make sure first click isn't a mine
         if linearSelection in values:
@@ -102,7 +97,6 @@ class Game():
             values.append(np.random.choice(freeTiles))
             values.remove(linearSelection)
         
-
 #       np.put(self.grid, np.random.choice(range(gridWidth*gridHeight), self.numMines, replace=False), 1)
 
         np.put(self.grid, values, 1)
@@ -140,6 +134,17 @@ class Game():
                 pygame.draw.rect(gameDisplay, color, (blockX, blockY, 
                                                       blockWidth, blockWidth))
                 
+    def reveal_surrounding(self, row, column):
+        for sCol in range(-1, 2):
+            for sRow in range(-1, 2):
+                if row+sRow < 0 or row+sRow > gridHeight-1 or column+sCol < 0 or column+sCol > gridWidth-1:
+                    continue
+                if self.flagGrid[row+sRow, column+sCol] == 0:
+                    self.flagGrid[row+sRow, column+sCol] = 1
+                    self.numTilesRevealed += 1
+                    if self.grid[row+sRow, column+sCol] == 0:
+                        self.reveal_surrounding(row+sRow, column+sCol)
+                                     
     def reveal(self, row, column):
         if self.flagGrid[row, column] == 0: #make sure tile isn't a flag and isn't revealed
             if self.grid[row, column] == 9:
@@ -148,14 +153,7 @@ class Game():
                 self.flagGrid[row, column] = 1
             elif self.grid[row, column] == 0:
 #                reveal all surrounding zeros
-                
-                for sCol in range(-1, 2):
-                    for sRow in range(-1, 2):
-                        if row+sRow < 0 or row+sRow > gridHeight-1 or column+sCol < 0 or column+sCol > gridWidth-1:
-                            continue
-                        if self.flagGrid[row+sRow, column+sCol] == 0:
-                            self.flagGrid[row+sRow, column+sCol] = 1
-                            self.numTilesRevealed += 1
+                self.reveal_surrounding(row, column)
                     
             else:
                 self.flagGrid[row, column] = 1
