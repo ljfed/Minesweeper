@@ -48,14 +48,14 @@ def message_to_screen(text, color, x, y, align): #align: topleft, topright, cent
 
 barHeight = 40
 
-blockWidth = 20
+tileWidth = 20
 border = 2
 
 gridWidth = 8
 gridHeight = 8
 
-displayWidth = blockWidth*gridWidth + border*(gridWidth+1)
-displayHeight = blockWidth*gridHeight + border*(gridHeight+1) + barHeight
+displayWidth = tileWidth*gridWidth + border*(gridWidth+1)
+displayHeight = tileWidth*gridHeight + border*(gridHeight+1) + barHeight
 
 gameDisplay = pygame.display.set_mode((displayWidth, displayHeight)) #screen size
 pygame.display.set_caption('Minesweeper') #Window Title
@@ -64,10 +64,20 @@ clock = pygame.time.Clock()
 fps = 30
 keysDown = {}
 
+##picture
+#imageList = ['safe', 'suspense', 'defeat', 'victory']
+#image = pygame.image.load('img/' + imageList[0] + '.png').convert_alpha()
+#imageX = (displayWidth)/2 - 30
+#imageY = 0
+
+
 class Game():
     def __init__(self):
         self.gameExit = False
         self.numMines = 10
+        if self.numMines >= gridWidth*gridHeight:
+            self.numMines = gridWidth*gridHeight - 1
+            
         self.timerSeconds = 0
         
         self.reset()
@@ -116,7 +126,7 @@ class Game():
         message_to_screen('{}'.format(self.flagCounter), colors[3], 5, 5, 'topleft')
         message_to_screen('{:.0f}'.format(self.timerSeconds), colors[3], 
                           displayWidth-5, 5, 'topright')
-        
+                
         for row in range(gridHeight):
             for column in range(gridWidth):
                 if self.flagGrid[row, column] == 1:
@@ -128,16 +138,19 @@ class Game():
                     #coordinate not revealed
                     color = white
                     
-                blockX = (border + blockWidth) * column + border
-                blockY = (border + blockWidth) * row + border + barHeight
+                tileX = (border + tileWidth) * column + border
+                tileY = (border + tileWidth) * row + border + barHeight
                 
-                pygame.draw.rect(gameDisplay, color, (blockX, blockY, 
-                                                      blockWidth, blockWidth))
+                pygame.draw.rect(gameDisplay, color, (tileX, tileY, 
+                                                      tileWidth, tileWidth))
+                
+#        gameDisplay.blit(image, (imageX, imageY))
                 
     def reveal_surrounding(self, row, column):
         for sCol in range(-1, 2):
             for sRow in range(-1, 2):
-                if row+sRow < 0 or row+sRow > gridHeight-1 or column+sCol < 0 or column+sCol > gridWidth-1:
+                if row+sRow < 0 or row+sRow > gridHeight-1 or column+sCol < 0 \
+                or column+sCol > gridWidth-1:
                     continue
                 if self.flagGrid[row+sRow, column+sCol] == 0:
                     self.flagGrid[row+sRow, column+sCol] = 1
@@ -175,7 +188,7 @@ class Game():
         if self.numTilesRevealed == gridWidth*gridHeight - self.numMines:
             print('VICTORY')
             self.gameOver = True
-        
+
     def left_click(self, row, column):
         print('Left Click At: {}, {}'.format(row, column)) 
         if self.leftClickCounter == 0: #first click
@@ -226,8 +239,13 @@ class Game():
                         self.reset()
                     else:
                         #convert real coordinates to grid corrdinates
-                        row = (pos[1] - barHeight) // (blockWidth + border)
-                        column = pos[0] // (blockWidth + border)
+                        row = (pos[1] - barHeight) // (tileWidth + border)
+                        column = pos[0] // (tileWidth + border)
+                        #solve issue where you can click outsie of grid range
+                        if row >= gridHeight:
+                            row = gridHeight-1
+                        if column >= gridWidth:
+                            column = gridWidth-1
                         
 #                        to detect both left and right detect 2 held down then trigger when one releases
                         if 1 in keysDown and 3 in keysDown:
