@@ -48,11 +48,11 @@ def message_to_screen(text, color, x, y, align): #align: topleft, topright, cent
 
 barHeight = 40
 
-tileWidth = 20
-border = 2
+tileWidth = 16
+border = 1
 
-gridWidth = 8
-gridHeight = 8
+gridWidth = 30
+gridHeight = 16
 
 displayWidth = tileWidth*gridWidth + border*(gridWidth+1)
 displayHeight = tileWidth*gridHeight + border*(gridHeight+1) + barHeight
@@ -74,7 +74,7 @@ keysDown = {}
 class Game():
     def __init__(self):
         self.gameExit = False
-        self.numMines = 10
+        self.numMines = 99
         if self.numMines >= gridWidth*gridHeight:
             self.numMines = gridWidth*gridHeight - 1
             
@@ -153,6 +153,8 @@ class Game():
                 or column+sCol > gridWidth-1:
                     continue
                 if self.flagGrid[row+sRow, column+sCol] == 0:
+                    if self.grid[row+sRow, column+sCol] == 9:
+                        print('DEFEAT')
                     self.flagGrid[row+sRow, column+sCol] = 1
                     self.numTilesRevealed += 1
                     if self.grid[row+sRow, column+sCol] == 0:
@@ -184,7 +186,6 @@ class Game():
         self.flagCounter = 0
         
     def check_victory(self):
-        print(self.numTilesRevealed)
         if self.numTilesRevealed == gridWidth*gridHeight - self.numMines:
             print('VICTORY')
             self.gameOver = True
@@ -204,11 +205,31 @@ class Game():
             self.flagGrid[row, column] = 0
             self.flagCounter += 1
         elif self.flagGrid[row, column] == 0:
-            self.flagGrid[row, column] =2
+            self.flagGrid[row, column] = 2
             self.flagCounter -= 1
         
     def middle_click(self, row, column):
         print('Middle Click At: {}, {}'.format(row, column))
+#        self.reveal_surrounding(row, column)
+#        if appropriate number of flags surrounding:
+#            chord, revealing all surrounding, unflagged squalres
+#            if a mine is revealed:
+#                defeat
+        testGrid = np.zeros((gridHeight, gridWidth))
+        for row_ in range(gridHeight):
+            for column_ in range(gridWidth):
+                if self.flagGrid[row_, column_] == 2:
+                    testGrid[row_, column_] = 1
+                    
+        conv = signal.convolve(testGrid, np.ones((3,3)), mode='same')
+#        print(conv[row, column])
+        
+        if conv[row, column] == self.grid[row, column]:
+            self.reveal_surrounding(row, column)
+        
+#        self.grid = self.grid.astype(np.bool)
+#        conv[self.grid] = 9
+#        self.grid = conv  
         
 
     def game_loop(self):
