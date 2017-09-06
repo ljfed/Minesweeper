@@ -46,25 +46,14 @@ gameDisplay = pygame.display.set_mode((displayWidth, displayHeight)) #screen siz
 pygame.display.set_caption('Minesweeper') #Window Title
 
 clock = pygame.time.Clock()
-fps = 30
+fps = 60
 keysDown = {}
 
 white = (255, 255, 255)
-#flagColor = (240, 23, 175)
-flagColor = (255, 150, 14)
-bgColor = (123, 123, 123)
+black = (0, 0, 0)
+gray = (192, 192, 192)     
+red = (255, 0, 0)     
 
-colors = {0: (192, 192, 192), #gray
-          1: (0, 0, 255), #blue
-          2: (0,128,0), #green
-          3: (255, 0, 0), #red
-          4: (0, 0, 128), #darkBlue
-          5: (128, 0, 0), #darkRed
-          6: (42, 148, 148), #lightBlue
-          7: (0, 0, 0), #black
-          8: (128, 128, 128), #lightgray
-          9: (255, 201, 14)} #yellow
-          
 img = {0: pygame.image.load('img/0.png').convert_alpha(),
        1: pygame.image.load('img/1.png').convert_alpha(),
        2: pygame.image.load('img/2.png').convert_alpha(),
@@ -77,11 +66,10 @@ img = {0: pygame.image.load('img/0.png').convert_alpha(),
        9: pygame.image.load('img/mine.png').convert_alpha(),
        'flag': pygame.image.load('img/flag.png').convert_alpha()}
 
-##picture
-#imageList = ['safe', 'suspense', 'defeat', 'victory']
-#image = pygame.image.load('img/' + imageList[0] + '.png').convert_alpha()
-#imageX = (displayWidth)/2 - 30
-#imageY = 0
+faces = {'safe': pygame.image.load('img/safe.png').convert_alpha(),
+         'suspense': pygame.image.load('img/suspense.png').convert_alpha(),
+         'defeat': pygame.image.load('img/defeat.png').convert_alpha(),
+         'victory': pygame.image.load('img/victory.png').convert_alpha()}
 
 
 class Game():
@@ -104,6 +92,7 @@ class Game():
         self.startTicks = pygame.time.get_ticks()
         self.numTilesRevealed = 0
         self.gameOver = False
+        self.face = faces['safe']
         
     def generate_board(self, row, column):
 #        generate board --> first click can't be a mine
@@ -134,32 +123,31 @@ class Game():
     def render(self):
         if not self.gameOver:
             self.timerSeconds = (pygame.time.get_ticks() - self.startTicks)/1000
-        gameDisplay.fill(colors[7]) 
-        pygame.draw.rect(gameDisplay, colors[0], (0, 0, displayWidth, barHeight))    
-        message_to_screen('{}'.format(self.flagCounter), colors[3], 5, 5, 'topleft')
-        message_to_screen('{:.0f}'.format(self.timerSeconds), colors[3], 
+        gameDisplay.fill(black) 
+        pygame.draw.rect(gameDisplay, gray, (0, 0, displayWidth, barHeight))
+        gameDisplay.blit(self.face, (displayWidth/2 - 11, barHeight/2 - 11)) #11 is ~half width of image (which is 23)
+        message_to_screen('{}'.format(self.flagCounter), red, 5, 5, 'topleft')
+        message_to_screen('{:.0f}'.format(self.timerSeconds),red, 
                           displayWidth-5, 5, 'topright')
                 
         for row in range(gridHeight):
             for column in range(gridWidth):
                 if self.flagGrid[row, column] == 1:
-#                    color = colors[self.grid[row, column]]
                     image = img[self.grid[row, column]]
                 elif self.flagGrid[row, column] == 2:
                     #coordinate is flagged
-#                    color = flagColor
                     image = img['flag']
                 else:
                     #coordinate not revealed
-                    color = white
                     tileX = (border + tileWidth) * column + border
                     tileY = (border + tileWidth) * row + border + barHeight
                 
-                    pygame.draw.rect(gameDisplay, color, (tileX, tileY, 
+                    pygame.draw.rect(gameDisplay, white, (tileX, tileY, 
                                                       tileWidth, tileWidth))
                     continue
                     
-                gameDisplay.blit(image, (border*column+tileWidth*column+border, barHeight+border*row+tileWidth*row+border))
+                gameDisplay.blit(image, (border*column+tileWidth*column+border,
+                                         barHeight+border*row+tileWidth*row+border))
                 
     def reveal_surrounding(self, row, column):
         for sCol in range(-1, 2):
@@ -237,15 +225,9 @@ class Game():
                     testGrid[row_, column_] = 1
                     
         conv = signal.convolve(testGrid, np.ones((3,3)), mode='same')
-#        print(conv[row, column])
         
         if conv[row, column] == self.grid[row, column]:
-            self.reveal_surrounding(row, column)
-        
-#        self.grid = self.grid.astype(np.bool)
-#        conv[self.grid] = 9
-#        self.grid = conv  
-        
+            self.reveal_surrounding(row, column)        
 
     def game_loop(self):
         while not self.gameExit:
