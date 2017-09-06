@@ -18,21 +18,6 @@ from scipy import signal
 
 pygame.init()
 
-white = (255, 255, 255)
-#flagColor = (240, 23, 175)
-flagColor = (255, 150, 14)
-
-colors = {0: (192, 192, 192), #gray
-          1: (0, 0, 255), #blue
-          2: (0,128,0), #green
-          3: (255, 0, 0), #red
-          4: (0, 0, 128), #darkBlue
-          5: (128, 0, 0), #darkRed
-          6: (42, 148, 148), #lightBlue
-          7: (0, 0, 0), #black
-          8: (128, 128, 128), #lightgray
-          9: (255, 201, 14)} #yellow
-
 font = pygame.font.SysFont(None, 30) #30 = font size
 
 def message_to_screen(text, color, x, y, align): #align: topleft, topright, center
@@ -48,7 +33,7 @@ def message_to_screen(text, color, x, y, align): #align: topleft, topright, cent
 
 barHeight = 40
 
-tileWidth = 16
+tileWidth = 15
 border = 1
 
 gridWidth = 30
@@ -63,6 +48,34 @@ pygame.display.set_caption('Minesweeper') #Window Title
 clock = pygame.time.Clock()
 fps = 30
 keysDown = {}
+
+white = (255, 255, 255)
+#flagColor = (240, 23, 175)
+flagColor = (255, 150, 14)
+bgColor = (123, 123, 123)
+
+colors = {0: (192, 192, 192), #gray
+          1: (0, 0, 255), #blue
+          2: (0,128,0), #green
+          3: (255, 0, 0), #red
+          4: (0, 0, 128), #darkBlue
+          5: (128, 0, 0), #darkRed
+          6: (42, 148, 148), #lightBlue
+          7: (0, 0, 0), #black
+          8: (128, 128, 128), #lightgray
+          9: (255, 201, 14)} #yellow
+          
+img = {0: pygame.image.load('img/0.png').convert_alpha(),
+       1: pygame.image.load('img/1.png').convert_alpha(),
+       2: pygame.image.load('img/2.png').convert_alpha(),
+       3: pygame.image.load('img/3.png').convert_alpha(),
+       4: pygame.image.load('img/4.png').convert_alpha(),
+       5: pygame.image.load('img/5.png').convert_alpha(),
+       6: pygame.image.load('img/6.png').convert_alpha(),
+       7: pygame.image.load('img/7.png').convert_alpha(),
+       8: pygame.image.load('img/8.png').convert_alpha(),
+       9: pygame.image.load('img/mine.png').convert_alpha(),
+       'flag': pygame.image.load('img/flag.png').convert_alpha()}
 
 ##picture
 #imageList = ['safe', 'suspense', 'defeat', 'victory']
@@ -130,21 +143,23 @@ class Game():
         for row in range(gridHeight):
             for column in range(gridWidth):
                 if self.flagGrid[row, column] == 1:
-                    color = colors[self.grid[row, column]]
+#                    color = colors[self.grid[row, column]]
+                    image = img[self.grid[row, column]]
                 elif self.flagGrid[row, column] == 2:
                     #coordinate is flagged
-                    color = flagColor
+#                    color = flagColor
+                    image = img['flag']
                 else:
                     #coordinate not revealed
                     color = white
-                    
-                tileX = (border + tileWidth) * column + border
-                tileY = (border + tileWidth) * row + border + barHeight
+                    tileX = (border + tileWidth) * column + border
+                    tileY = (border + tileWidth) * row + border + barHeight
                 
-                pygame.draw.rect(gameDisplay, color, (tileX, tileY, 
+                    pygame.draw.rect(gameDisplay, color, (tileX, tileY, 
                                                       tileWidth, tileWidth))
-                
-#        gameDisplay.blit(image, (imageX, imageY))
+                    continue
+                    
+                gameDisplay.blit(image, (border*column+tileWidth*column+border, barHeight+border*row+tileWidth*row+border))
                 
     def reveal_surrounding(self, row, column):
         for sCol in range(-1, 2):
