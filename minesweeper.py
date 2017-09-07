@@ -36,8 +36,8 @@ barHeight = 40
 tileWidth = 15
 border = 1
 
-gridWidth = 30
-gridHeight = 16
+gridWidth = 10
+gridHeight = 10
 
 displayWidth = tileWidth*gridWidth + border*(gridWidth+1)
 displayHeight = tileWidth*gridHeight + border*(gridHeight+1) + barHeight
@@ -75,7 +75,7 @@ faces = {'safe': pygame.image.load('img/safe.png').convert_alpha(),
 class Game():
     def __init__(self):
         self.gameExit = False
-        self.numMines = 99
+        self.numMines = 10
         if self.numMines >= gridWidth*gridHeight:
             self.numMines = gridWidth*gridHeight - 1
             
@@ -227,7 +227,16 @@ class Game():
         conv = signal.convolve(testGrid, np.ones((3,3)), mode='same')
         
         if conv[row, column] == self.grid[row, column]:
-            self.reveal_surrounding(row, column)        
+            self.reveal_surrounding(row, column)      
+            
+    def real_position_to_coordinates(self, pos):
+        self.row = (pos[1] - barHeight) // (tileWidth + border)
+        self.column = pos[0] // (tileWidth + border)
+        #solve issue where you can click outsie of grid range
+        if self.row >= gridHeight:
+            self.row = gridHeight-1
+        if self.column >= gridWidth:
+            self.column = gridWidth-1        
 
     def game_loop(self):
         while not self.gameExit:
@@ -248,33 +257,28 @@ class Game():
                         
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     keysDown[event.button] = True
+                    pos = pygame.mouse.get_pos()
+                    if event.button == 3 and pos[1] >= barHeight:
+                        self.real_position_to_coordinates(pos)
+                        self.right_click(self.row, self.column)
                 
                 if event.type == pygame.MOUSEBUTTONUP:
                     button = event.button #left click = 1, middle = 2 right click = 3
                     pos = pygame.mouse.get_pos()
                     
-                    if pos[1] <= barHeight:
+                    if pos[1] <= barHeight and button == 1:
                         self.reset()
                     else:
-                        #convert real coordinates to grid corrdinates
-                        row = (pos[1] - barHeight) // (tileWidth + border)
-                        column = pos[0] // (tileWidth + border)
-                        #solve issue where you can click outsie of grid range
-                        if row >= gridHeight:
-                            row = gridHeight-1
-                        if column >= gridWidth:
-                            column = gridWidth-1
+                        self.real_position_to_coordinates(pos)
                         
 #                        to detect both left and right detect 2 held down then trigger when one releases
                         if 1 in keysDown and 3 in keysDown:
                             if button == 1 or button == 3:
-                                self.middle_click(row, column)
+                                self.middle_click(self.row, self.column)
                         elif button == 2:
-                            self.middle_click(row, column)
+                            self.middle_click(self.row, self.column)
                         elif button == 1:
-                            self.left_click(row, column)
-                        elif button ==3:
-                            self.right_click(row, column)
+                            self.left_click(self.row, self.column)
                     
                     if button in keysDown:   
                             del keysDown[button]
