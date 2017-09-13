@@ -36,8 +36,8 @@ barHeight = 40
 tileWidth = 15
 border = 1
 
-gridWidth = 10
-gridHeight = 10
+gridWidth = 30
+gridHeight = 16
 
 displayWidth = tileWidth*gridWidth + border*(gridWidth+1)
 displayHeight = tileWidth*gridHeight + border*(gridHeight+1) + barHeight
@@ -75,7 +75,7 @@ faces = {'safe': pygame.image.load('img/safe.png').convert_alpha(),
 class Game():
     def __init__(self):
         self.gameExit = False
-        self.numMines = 10
+        self.numMines = 99
         if self.numMines >= gridWidth*gridHeight:
             self.numMines = gridWidth*gridHeight - 1
             
@@ -86,7 +86,7 @@ class Game():
     
     def reset(self):
         self.grid = np.zeros((gridHeight, gridWidth))
-        self.flagGrid = np.zeros((gridHeight, gridWidth))
+        self.revealGrid = np.zeros((gridHeight, gridWidth)) #0=hidden, 1=revealed, 2=flag
         self.flagCounter = self.numMines
         self.leftClickCounter = 0
         self.startTicks = pygame.time.get_ticks()
@@ -132,9 +132,9 @@ class Game():
                 
         for row in range(gridHeight):
             for column in range(gridWidth):
-                if self.flagGrid[row, column] == 1:
+                if self.revealGrid[row, column] == 1:
                     image = img[self.grid[row, column]]
-                elif self.flagGrid[row, column] == 2:
+                elif self.revealGrid[row, column] == 2:
                     #coordinate is flagged
                     image = img['flag']
                 else:
@@ -146,8 +146,8 @@ class Game():
                                                       tileWidth, tileWidth))
                     continue
                     
-                gameDisplay.blit(image, (border*column+tileWidth*column+border,
-                                         barHeight+border*row+tileWidth*row+border))
+                gameDisplay.blit(image, ((border + tileWidth)*column + border,
+                                         (border +tileWidth )*row + border + barHeight))
                 
     def reveal_surrounding(self, row, column):
         for sCol in range(-1, 2):
@@ -155,26 +155,26 @@ class Game():
                 if row+sRow < 0 or row+sRow > gridHeight-1 or column+sCol < 0 \
                 or column+sCol > gridWidth-1:
                     continue
-                if self.flagGrid[row+sRow, column+sCol] == 0:
+                if self.revealGrid[row+sRow, column+sCol] == 0:
                     if self.grid[row+sRow, column+sCol] == 9:
                         print('DEFEAT')
-                    self.flagGrid[row+sRow, column+sCol] = 1
+                    self.revealGrid[row+sRow, column+sCol] = 1
                     self.numTilesRevealed += 1
                     if self.grid[row+sRow, column+sCol] == 0:
                         self.reveal_surrounding(row+sRow, column+sCol)
                                      
     def reveal(self, row, column):
-        if self.flagGrid[row, column] == 0: #make sure tile isn't a flag and isn't revealed
+        if self.revealGrid[row, column] == 0: #make sure tile isn't a flag and isn't revealed
             if self.grid[row, column] == 9:
                 print('DEFEAT')
                 self.gameOver = True
-                self.flagGrid[row, column] = 1
+                self.revealGrid[row, column] = 1
             elif self.grid[row, column] == 0:
 #                reveal all surrounding zeros
                 self.reveal_surrounding(row, column)
                     
             else:
-                self.flagGrid[row, column] = 1
+                self.revealGrid[row, column] = 1
                 self.numTilesRevealed += 1
             
         self.check_victory()
@@ -183,9 +183,9 @@ class Game():
         for row in range(gridHeight):
             for column in range(gridWidth):
                 if self.grid[row, column] == 9:
-                    self.flagGrid[row, column] = 2
+                    self.revealGrid[row, column] = 2
                 else:
-                    self.flagGrid[row, column] = 1
+                    self.revealGrid[row, column] = 1
         self.flagCounter = 0
         
     def check_victory(self):
@@ -204,30 +204,29 @@ class Game():
             
     def right_click(self, row, column):
         print('Right Click At: {}, {}'.format(row, column))
-        if self.flagGrid[row, column] == 2:
-            self.flagGrid[row, column] = 0
+        if self.revealGrid[row, column] == 2:
+            self.revealGrid[row, column] = 0
             self.flagCounter += 1
-        elif self.flagGrid[row, column] == 0:
-            self.flagGrid[row, column] = 2
+        elif self.revealGrid[row, column] == 0:
+            self.revealGrid[row, column] = 2
             self.flagCounter -= 1
         
     def middle_click(self, row, column):
         print('Middle Click At: {}, {}'.format(row, column))
-#        self.reveal_surrounding(row, column)
-#        if appropriate number of flags surrounding:
-#            chord, revealing all surrounding, unflagged squalres
-#            if a mine is revealed:
-#                defeat
-        testGrid = np.zeros((gridHeight, gridWidth))
-        for row_ in range(gridHeight):
-            for column_ in range(gridWidth):
-                if self.flagGrid[row_, column_] == 2:
-                    testGrid[row_, column_] = 1
-                    
-        conv = signal.convolve(testGrid, np.ones((3,3)), mode='same')
         
-        if conv[row, column] == self.grid[row, column]:
-            self.reveal_surrounding(row, column)      
+        #make sure coordinaet is revealed and no point doing anything if coordinate is a 0
+        if self.revealGrid[row, column] == 1 and self.grid[row, column] != 0:
+            flagGrid = np.zeros((gridHeight, gridWidth))
+            #grid with 1 representing flag and 0 anything else
+            for row_ in range(gridHeight):
+                for column_ in range(gridWidth):
+                    if self.revealGrid[row_, column_] == 2:
+                        flagGrid[row_, column_] = 1
+                        
+            conv = signal.convolve(flagGrid, np.ones((3,3)), mode='same')
+            #make sure number of flags surrounding is number on square
+            if conv[row, column] == self.grid[row, column]:
+                self.reveal_surrounding(row, column)      
             
     def real_position_to_coordinates(self, pos):
         self.row = (pos[1] - barHeight) // (tileWidth + border)
