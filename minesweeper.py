@@ -70,6 +70,7 @@ faces = {'safe': pygame.image.load('img/safe.png').convert_alpha(),
          'suspense': pygame.image.load('img/suspense.png').convert_alpha(),
          'defeat': pygame.image.load('img/defeat.png').convert_alpha(),
          'victory': pygame.image.load('img/victory.png').convert_alpha()}
+faceRect = pygame.Rect((displayWidth/2 - 11, barHeight/2 - 11), (23, 23)) #11 is ~half width of image (which is 23)
 
 
 class Game():
@@ -125,7 +126,7 @@ class Game():
             self.timerSeconds = (pygame.time.get_ticks() - self.startTicks)/1000
         gameDisplay.fill(black) 
         pygame.draw.rect(gameDisplay, gray, (0, 0, displayWidth, barHeight))
-        gameDisplay.blit(self.face, (displayWidth/2 - 11, barHeight/2 - 11)) #11 is ~half width of image (which is 23)
+        gameDisplay.blit(self.face, faceRect) 
         message_to_screen('{}'.format(self.flagCounter), red, 5, 5, 'topleft')
         message_to_screen('{:.0f}'.format(self.timerSeconds),red, 
                           displayWidth-5, 5, 'topright')
@@ -213,7 +214,6 @@ class Game():
         
     def middle_click(self, row, column):
         print('Middle Click At: {}, {}'.format(row, column))
-        
         #make sure coordinaet is revealed and no point doing anything if coordinate is a 0
         if self.revealGrid[row, column] == 1 and self.grid[row, column] != 0:
             flagGrid = np.zeros((gridHeight, gridWidth))
@@ -264,10 +264,11 @@ class Game():
                 if event.type == pygame.MOUSEBUTTONUP:
                     button = event.button #left click = 1, middle = 2 right click = 3
                     pos = pygame.mouse.get_pos()
-                    
-                    if pos[1] <= barHeight and button == 1:
+                        
+#                    if pos[1] <= barHeight and button == 1:
+                    if faceRect.collidepoint(pos) and button ==1:
                         self.reset()
-                    else:
+                    if pos[1] >= barHeight:
                         self.real_position_to_coordinates(pos)
                         
 #                        to detect both left and right detect 2 held down then trigger when one releases
@@ -281,6 +282,13 @@ class Game():
                     
                     if button in keysDown:   
                             del keysDown[button]
+                            
+                if 1 in keysDown:
+                    self.face = faces['suspense']
+                else:
+                    self.face = faces['safe']
+                            
+                
                             
             self.render()
             pygame.display.update()
