@@ -16,6 +16,20 @@ import pygame
 import numpy as np
 from scipy import signal
 
+gameMode = 'i' #b=beginner, i=intermediate, e=expert
+if gameMode == 'e':
+    gridWidth = 30
+    gridHeight = 16
+    numMines = 99
+elif gameMode == 'i':
+    gridWidth = 16
+    gridHeight = 16
+    numMines = 40
+elif gameMode == 'b':
+    gridWidth = 8
+    gridHeight = 8
+    numMines = 10
+
 pygame.init()
 
 font = pygame.font.SysFont(None, 30) #30 = font size
@@ -35,9 +49,6 @@ barHeight = 40
 
 tileWidth = 15
 border = 1
-
-gridWidth = 30
-gridHeight = 16
 
 displayWidth = tileWidth*gridWidth + border*(gridWidth+1)
 displayHeight = tileWidth*gridHeight + border*(gridHeight+1) + barHeight
@@ -76,7 +87,7 @@ faceRect = pygame.Rect((displayWidth/2 - 11, barHeight/2 - 11), (23, 23)) #11 is
 class Game():
     def __init__(self):
         self.gameExit = False
-        self.numMines = 99
+        self.numMines = numMines
         if self.numMines >= gridWidth*gridHeight:
             self.numMines = gridWidth*gridHeight - 1
             
@@ -111,7 +122,6 @@ class Game():
             values.remove(linearSelection)
         
 #       np.put(self.grid, np.random.choice(range(gridWidth*gridHeight), self.numMines, replace=False), 1)
-
         np.put(self.grid, values, 1)
 #        np.put(input grid, [locations to change - can reference as if grid was a 1 dimensional array], number to change location to)
 #        np.random.choice(random numbers chosen from elements of this input, num replacements to make, false makes numbers different each time)
@@ -202,6 +212,7 @@ class Game():
         else:
             self.reveal(row, column)
         self.leftClickCounter += 1
+        print(self.numTilesRevealed)
             
     def right_click(self, row, column):
         print('Right Click At: {}, {}'.format(row, column))
@@ -265,7 +276,6 @@ class Game():
                     button = event.button #left click = 1, middle = 2 right click = 3
                     pos = pygame.mouse.get_pos()
                         
-#                    if pos[1] <= barHeight and button == 1:
                     if faceRect.collidepoint(pos) and button ==1:
                         self.reset()
                     if pos[1] >= barHeight:
@@ -284,11 +294,11 @@ class Game():
                             del keysDown[button]
                             
                 if 1 in keysDown:
-                    self.face = faces['suspense']
+                    if not faceRect.collidepoint(pos):
+                        self.face = faces['suspense']
                 else:
                     self.face = faces['safe']
                             
-                
                             
             self.render()
             pygame.display.update()
