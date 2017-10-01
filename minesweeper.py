@@ -5,13 +5,6 @@ Created on Thu Aug  3 10:07:28 2017
 @author: Laurence
 """
 
-'''
-Dimensions:
-Expert: 30x16, 99 mines
-Intermediate: 16x16, 40 mines
-Beginner: 8x8, 10 mines
-'''
-
 import pygame
 import numpy as np
 from scipy import signal
