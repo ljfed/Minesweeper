@@ -16,7 +16,7 @@ import pygame
 import numpy as np
 from scipy import signal
 
-gameMode = 'i' #b=beginner, i=intermediate, e=expert
+gameMode = 'b' #b=beginner, i=intermediate, e=expert
 if gameMode == 'e':
     gridWidth = 30
     gridHeight = 16
@@ -104,6 +104,7 @@ class Game():
         self.startTicks = pygame.time.get_ticks()
         self.numTilesRevealed = 0
         self.gameOver = False
+        self.gameOverType = ''
         self.face = faces['safe']
         
     def generate_board(self, row, column):
@@ -160,6 +161,19 @@ class Game():
                 gameDisplay.blit(image, ((border + tileWidth)*column + border,
                                          (border +tileWidth )*row + border + barHeight))
                 
+    def game_over(self, type_, row, column): #type = 'defeat' or 'victory'
+        print(type_)
+        self.gameOver = True
+        self.gameTime = (pygame.time.get_ticks() - self.startTicks)/1000
+        self.timerSeconds = self.gameTime
+        if type_ == 'defeat':
+            self.revealGrid[row, column] = 1
+            self.face = faces['defeat']
+            return
+        elif type_ == 'victory':
+            self.face = faces['victory']
+            return
+            
     def reveal_surrounding(self, row, column):
         for sCol in range(-1, 2):
             for sRow in range(-1, 2):
@@ -168,7 +182,7 @@ class Game():
                     continue
                 if self.revealGrid[row+sRow, column+sCol] == 0:
                     if self.grid[row+sRow, column+sCol] == 9:
-                        print('DEFEAT')
+                        self.game_over('defeat', row, column)
                     self.revealGrid[row+sRow, column+sCol] = 1
                     self.numTilesRevealed += 1
                     if self.grid[row+sRow, column+sCol] == 0:
@@ -177,9 +191,7 @@ class Game():
     def reveal(self, row, column):
         if self.revealGrid[row, column] == 0: #make sure tile isn't a flag and isn't revealed
             if self.grid[row, column] == 9:
-                print('DEFEAT')
-                self.gameOver = True
-                self.revealGrid[row, column] = 1
+                self.game_over('defeat', row, column)
             elif self.grid[row, column] == 0:
 #                reveal all surrounding zeros
                 self.reveal_surrounding(row, column)
@@ -188,7 +200,7 @@ class Game():
                 self.revealGrid[row, column] = 1
                 self.numTilesRevealed += 1
             
-        self.check_victory()
+        self.check_victory(row, column)
         
     def reveal_everything(self):
         for row in range(gridHeight):
@@ -199,10 +211,9 @@ class Game():
                     self.revealGrid[row, column] = 1
         self.flagCounter = 0
         
-    def check_victory(self):
+    def check_victory(self, row, column):
         if self.numTilesRevealed == gridWidth*gridHeight - self.numMines:
-            print('VICTORY')
-            self.gameOver = True
+            self.game_over('victory', row, column)
 
     def left_click(self, row, column):
         print('Left Click At: {}, {}'.format(row, column)) 
@@ -265,7 +276,7 @@ class Game():
                     if event.key == pygame.K_r:
                         self.reveal_everything()
                         
-                if event.type == pygame.MOUSEBUTTONDOWN:
+                if event.type == pygame.MOUSEBUTTONDOWN and not self.gameOver:
                     keysDown[event.button] = True
                     pos = pygame.mouse.get_pos()
                     if event.button == 3 and pos[1] >= barHeight:
@@ -278,7 +289,7 @@ class Game():
                         
                     if faceRect.collidepoint(pos) and button ==1:
                         self.reset()
-                    if pos[1] >= barHeight:
+                    if pos[1] >= barHeight and not self.gameOver:
                         self.real_position_to_coordinates(pos)
                         
 #                        to detect both left and right detect 2 held down then trigger when one releases
@@ -293,11 +304,12 @@ class Game():
                     if button in keysDown:   
                             del keysDown[button]
                             
-                if 1 in keysDown:
-                    if not faceRect.collidepoint(pos):
-                        self.face = faces['suspense']
-                else:
-                    self.face = faces['safe']
+                if not self.gameOver:            
+                    if 1 in keysDown:
+                        if not faceRect.collidepoint(pos):
+                            self.face = faces['suspense']
+                    else:
+                        self.face = faces['safe']
                             
                             
             self.render()
