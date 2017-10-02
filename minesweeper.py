@@ -9,7 +9,7 @@ import pygame
 import numpy as np
 from scipy import signal
 
-gameMode = 'b' #b=beginner, i=intermediate, e=expert, c=custom
+gameMode = 'i' #b=beginner, i=intermediate, e=expert, c=custom
 if gameMode == 'e':
     gridWidth = 30
     gridHeight = 16
@@ -22,10 +22,10 @@ elif gameMode == 'b':
     gridWidth = 8
     gridHeight = 8
     numMines = 10
-elif gameMode == 'c':
-    gridWidth = 12
-    gridHeight = 12
-    numMines = 16   
+elif gameMode == 'c': #large values can generate a recursion error if trying to reveal more than (sys.getrecursionlimit()) aligned zeros. Adjusting mine density may help
+    gridWidth = 100
+    gridHeight = 20
+    numMines = 350  
 
 pygame.init()
 
@@ -129,7 +129,7 @@ class Game():
         conv = signal.convolve(self.grid, np.ones((3,3)), mode='same')
         self.grid = self.grid.astype(np.bool)
         conv[self.grid] = 9
-        self.grid = conv    
+        self.grid = conv.astype(np.int32)    
         
     def render(self):
         if not self.gameOver:
@@ -165,13 +165,21 @@ class Game():
         self.gameOver = True
         self.gameTime = (pygame.time.get_ticks() - self.startTicks)/1000
         self.timerSeconds = self.gameTime
-        if type_ == 'defeat':
+        if type_ == 'victory':
+            self.face = faces['victory']
+            self.reveal_everything()            
+            
+        elif type_ == 'defeat':
             self.revealGrid[self.row, self.column] = 1
             self.face = faces['defeat']
+#            self.wrongFlagCoordinates = []
+#            for row in range(gridHeight):
+#                for column in range(gridWidth):
+#                    if self.grid[row, column] != 9 and self.revealGrid[row, column] == 2:
+#                        self.wrongFlagCoordinates.append([row, column])
+#                    elif self.grid[row, column] == 9:
+#                        self.revealGrid[row, column] = 2
             
-        elif type_ == 'victory':
-            self.face = faces['victory']
-            self.reveal_everything()
             
     def reveal_surrounding(self, row, column):
         for sCol in range(-1, 2):
