@@ -106,9 +106,9 @@ class Game():
         self.gameOverType = ''
         self.face = faces['safe']
         
-    def generate_board(self, row, column):
+    def generate_board(self):
 #        generate board --> first click can't be a mine
-        linearSelection = column + row*gridWidth #convert 2d coordinates into linear coordinate
+        linearSelection = self.column + self.row*gridWidth #convert 2d coordinates into linear coordinate
         
         values = np.random.choice(range(gridWidth*gridHeight), self.numMines, replace=False)
 #        make sure first click isn't a mine
@@ -160,13 +160,13 @@ class Game():
                 gameDisplay.blit(image, ((border + tileWidth)*column + border,
                                          (border +tileWidth )*row + border + barHeight))
                 
-    def game_over(self, type_, row, column): #type = 'defeat' or 'victory'
+    def game_over(self, type_): #type = 'defeat' or 'victory'
         print(type_)
         self.gameOver = True
         self.gameTime = (pygame.time.get_ticks() - self.startTicks)/1000
         self.timerSeconds = self.gameTime
         if type_ == 'defeat':
-            self.revealGrid[row, column] = 1
+            self.revealGrid[self.row, self.column] = 1
             self.face = faces['defeat']
             
         elif type_ == 'victory':
@@ -181,27 +181,27 @@ class Game():
                     continue
                 if self.revealGrid[row+sRow, column+sCol] == 0:
                     if self.grid[row+sRow, column+sCol] == 9:
-                        self.game_over('defeat', row, column)
+                        self.game_over('defeat')
                     self.revealGrid[row+sRow, column+sCol] = 1
                     self.numTilesRevealed += 1
                     if self.grid[row+sRow, column+sCol] == 0:
                         self.reveal_surrounding(row+sRow, column+sCol)
                         
-        self.check_victory(row, column)
+        self.check_victory()
                                      
-    def reveal(self, row, column):
-        if self.revealGrid[row, column] == 0: #make sure tile isn't a flag and isn't revealed
-            if self.grid[row, column] == 9:
-                self.game_over('defeat', row, column)
-            elif self.grid[row, column] == 0:
+    def reveal(self):
+        if self.revealGrid[self.row, self.column] == 0: #make sure tile isn't a flag and isn't revealed
+            if self.grid[self.row, self.column] == 9:
+                self.game_over('defeat')
+            elif self.grid[self.row, self.column] == 0:
 #                reveal all surrounding zeros
-                self.reveal_surrounding(row, column)
+                self.reveal_surrounding(self.row, self.column)
                     
             else:
-                self.revealGrid[row, column] = 1
+                self.revealGrid[self.row, self.column] = 1
                 self.numTilesRevealed += 1
             
-        self.check_victory(row, column)
+        self.check_victory()
         
     def reveal_everything(self):
         for row in range(gridHeight):
@@ -212,33 +212,34 @@ class Game():
                     self.revealGrid[row, column] = 1
         self.flagCounter = 0
         
-    def check_victory(self, row, column):
+    def check_victory(self):
         if self.numTilesRevealed == gridWidth*gridHeight - self.numMines:
-            self.game_over('victory', row, column)
+            self.game_over('victory')
 
-    def left_click(self, row, column):
-        print('Left Click At: {}, {}'.format(row, column)) 
+    def left_click(self):
+        print('Left Click At: {}, {}'.format(self.row, self.column)) 
         if self.leftClickCounter == 0: #first click
-            self.generate_board(row, column)
-            self.reveal(row, column)
+            self.generate_board()
+            self.reveal()
         else:
-            self.reveal(row, column)
+            self.reveal()
         self.leftClickCounter += 1
         print(self.numTilesRevealed)
             
-    def right_click(self, row, column):
-        print('Right Click At: {}, {}'.format(row, column))
-        if self.revealGrid[row, column] == 2:
-            self.revealGrid[row, column] = 0
+    def right_click(self):
+        print('Right Click At: {}, {}'.format(self.row, self.column))
+        if self.revealGrid[self.row, self.column] == 2:
+            self.revealGrid[self.row, self.column] = 0
             self.flagCounter += 1
-        elif self.revealGrid[row, column] == 0:
-            self.revealGrid[row, column] = 2
+        elif self.revealGrid[self.row, self.column] == 0:
+            self.revealGrid[self.row, self.column] = 2
             self.flagCounter -= 1
         
-    def middle_click(self, row, column):
-        print('Middle Click At: {}, {}'.format(row, column))
+    def middle_click(self):
+        print('Middle Click At: {}, {}'.format(self.row, self.column))
         #make sure coordinaet is revealed and no point doing anything if coordinate is a 0
-        if self.revealGrid[row, column] == 1 and self.grid[row, column] != 0:
+        if self.revealGrid[self.row, self.column] == 1 \
+        and self.grid[self.row, self.column] != 0:
             flagGrid = np.zeros((gridHeight, gridWidth))
             #grid with 1 representing flag and 0 anything else
             for row_ in range(gridHeight):
@@ -248,8 +249,8 @@ class Game():
                         
             conv = signal.convolve(flagGrid, np.ones((3,3)), mode='same')
             #make sure number of flags surrounding is number on square
-            if conv[row, column] == self.grid[row, column]:
-                self.reveal_surrounding(row, column)      
+            if conv[self.row, self.column] == self.grid[self.row, self.column]:
+                self.reveal_surrounding(self.row, self.column)      
             
     def real_position_to_coordinates(self, pos):
         self.row = (pos[1] - barHeight) // (tileWidth + border)
@@ -282,7 +283,7 @@ class Game():
                     pos = pygame.mouse.get_pos()
                     if event.button == 3 and pos[1] >= barHeight:
                         self.real_position_to_coordinates(pos)
-                        self.right_click(self.row, self.column)
+                        self.right_click()
                 
                 if event.type == pygame.MOUSEBUTTONUP:
                     button = event.button #left click = 1, middle = 2 right click = 3
@@ -296,11 +297,11 @@ class Game():
 #                        to detect both left and right detect 2 held down then trigger when one releases
                         if 1 in keysDown and 3 in keysDown:
                             if button == 1 or button == 3:
-                                self.middle_click(self.row, self.column)
+                                self.middle_click()
                         elif button == 2:
-                            self.middle_click(self.row, self.column)
+                            self.middle_click()
                         elif button == 1:
-                            self.left_click(self.row, self.column)
+                            self.left_click()
                     
                     if button in keysDown:   
                             del keysDown[button]
