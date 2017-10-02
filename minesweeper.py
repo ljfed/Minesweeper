@@ -9,7 +9,7 @@ import pygame
 import numpy as np
 from scipy import signal
 
-gameMode = 'b' #b=beginner, i=intermediate, e=expert
+gameMode = 'b' #b=beginner, i=intermediate, e=expert, c=custom
 if gameMode == 'e':
     gridWidth = 30
     gridHeight = 16
@@ -22,6 +22,10 @@ elif gameMode == 'b':
     gridWidth = 8
     gridHeight = 8
     numMines = 10
+elif gameMode == 'c':
+    gridWidth = 12
+    gridHeight = 12
+    numMines = 16   
 
 pygame.init()
 
@@ -68,7 +72,9 @@ img = {0: pygame.image.load('img/0.png').convert_alpha(),
        7: pygame.image.load('img/7.png').convert_alpha(),
        8: pygame.image.load('img/8.png').convert_alpha(),
        9: pygame.image.load('img/mine.png').convert_alpha(),
-       'flag': pygame.image.load('img/flag.png').convert_alpha()}
+       'flag': pygame.image.load('img/flag.png').convert_alpha(),
+       'wrongFlag': pygame.image.load('img/incorrect_flag.png').convert_alpha(),
+       'mineExplode': pygame.image.load('img/mine_explode.png').convert_alpha()}
 
 faces = {'safe': pygame.image.load('img/safe.png').convert_alpha(),
          'suspense': pygame.image.load('img/suspense.png').convert_alpha(),
@@ -162,10 +168,10 @@ class Game():
         if type_ == 'defeat':
             self.revealGrid[row, column] = 1
             self.face = faces['defeat']
-            return
+            
         elif type_ == 'victory':
             self.face = faces['victory']
-            return
+            self.reveal_everything()
             
     def reveal_surrounding(self, row, column):
         for sCol in range(-1, 2):
@@ -180,6 +186,8 @@ class Game():
                     self.numTilesRevealed += 1
                     if self.grid[row+sRow, column+sCol] == 0:
                         self.reveal_surrounding(row+sRow, column+sCol)
+                        
+        self.check_victory(row, column)
                                      
     def reveal(self, row, column):
         if self.revealGrid[row, column] == 0: #make sure tile isn't a flag and isn't revealed
