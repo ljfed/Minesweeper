@@ -9,7 +9,7 @@ import pygame
 import numpy as np
 from scipy import signal
 
-gameMode = 'i' #b=beginner, i=intermediate, e=expert, c=custom
+gameMode = 'e' #b=beginner, i=intermediate, e=expert, c=custom
 if gameMode == 'e':
     gridWidth = 30
     gridHeight = 16
@@ -22,7 +22,10 @@ elif gameMode == 'b':
     gridWidth = 8
     gridHeight = 8
     numMines = 10
-elif gameMode == 'c': #large values can generate a recursion error if trying to reveal more than (sys.getrecursionlimit()) aligned zeros. Adjusting mine density may help
+elif gameMode == 'c': 
+    '''large values can generate a recursion error if trying to reveal more than 
+    "sys.getrecursionlimit()" surrounding zeros at once. Adjusting mine density 
+    may help. Also program is probably not optimised enough to handle large boards'''
     gridWidth = 100
     gridHeight = 20
     numMines = 350  
@@ -159,6 +162,15 @@ class Game():
                     
                 gameDisplay.blit(image, ((border + tileWidth)*column + border,
                                          (border +tileWidth )*row + border + barHeight))
+        if self.gameOver:
+            for coordinate in self.hiddenMines:
+                image = img[9]
+                gameDisplay.blit(image, ((border + tileWidth)*coordinate[1] + border,
+                                         (border +tileWidth )*coordinate[0] + border + barHeight))
+            for coordinate in self.wrongFlagCoordinates:
+                image = img['wrongFlag']
+                gameDisplay.blit(image, ((border + tileWidth)*coordinate[1] + border,
+                                         (border +tileWidth )*coordinate[0] + border + barHeight))
                 
     def game_over(self, type_): #type = 'defeat' or 'victory'
         print(type_)
@@ -172,13 +184,15 @@ class Game():
         elif type_ == 'defeat':
             self.revealGrid[self.row, self.column] = 1
             self.face = faces['defeat']
-#            self.wrongFlagCoordinates = []
-#            for row in range(gridHeight):
-#                for column in range(gridWidth):
-#                    if self.grid[row, column] != 9 and self.revealGrid[row, column] == 2:
-#                        self.wrongFlagCoordinates.append([row, column])
-#                    elif self.grid[row, column] == 9:
-#                        self.revealGrid[row, column] = 2
+            
+            self.wrongFlagCoordinates = []
+            self.hiddenMines = []
+            for row in range(gridHeight):
+                for column in range(gridWidth):
+                    if self.grid[row, column] != 9 and self.revealGrid[row, column] == 2:
+                        self.wrongFlagCoordinates.append([row, column])
+                    elif self.grid[row, column] == 9 and self.revealGrid[row, column] !=2:
+                        self.hiddenMines.append([row, column])
             
             
     def reveal_surrounding(self, row, column):
