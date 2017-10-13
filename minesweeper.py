@@ -108,6 +108,7 @@ class Game():
         self.gameOver = False
         self.gameOverType = ''
         self.face = faces['safe']
+        self.clickedMines = []
         
     def generate_board(self):
 #        generate board --> first click can't be a mine
@@ -171,6 +172,10 @@ class Game():
                 image = img['wrongFlag']
                 gameDisplay.blit(image, ((border + tileWidth)*coordinate[1] + border,
                                          (border +tileWidth )*coordinate[0] + border + barHeight))
+            for coordinate in self.clickedMines:
+                image = img['mineExplode']
+                gameDisplay.blit(image, ((border + tileWidth)*coordinate[1] + border,
+                                         (border +tileWidth )*coordinate[0] + border + barHeight))
                 
     def game_over(self, type_): #type = 'defeat' or 'victory'
         print(type_)
@@ -204,6 +209,7 @@ class Game():
                 if self.revealGrid[row+sRow, column+sCol] == 0:
                     if self.grid[row+sRow, column+sCol] == 9:
                         self.game_over('defeat')
+                        self.clickedMines.append([row+sRow, column+sCol])
                     self.revealGrid[row+sRow, column+sCol] = 1
                     self.numTilesRevealed += 1
                     if self.grid[row+sRow, column+sCol] == 0:
@@ -215,6 +221,7 @@ class Game():
         if self.revealGrid[self.row, self.column] == 0: #make sure tile isn't a flag and isn't revealed
             if self.grid[self.row, self.column] == 9:
                 self.game_over('defeat')
+                self.clickedMines.append([self.row, self.column])
             elif self.grid[self.row, self.column] == 0:
 #                reveal all surrounding zeros
                 self.reveal_surrounding(self.row, self.column)
