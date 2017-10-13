@@ -9,7 +9,7 @@ import pygame
 import numpy as np
 from scipy import signal
 
-gameMode = 'e' #b=beginner, i=intermediate, e=expert, c=custom
+gameMode = 'b' #b=beginner, i=intermediate, e=expert, c=custom
 if gameMode == 'e':
     gridWidth = 30
     gridHeight = 16
@@ -163,7 +163,7 @@ class Game():
                     
                 gameDisplay.blit(image, ((border + tileWidth)*column + border,
                                          (border +tileWidth )*row + border + barHeight))
-        if self.gameOver:
+        if self.gameOver and self.gameOverType == 'defeat':
             for coordinate in self.hiddenMines:
                 image = img[9]
                 gameDisplay.blit(image, ((border + tileWidth)*coordinate[1] + border,
@@ -178,6 +178,7 @@ class Game():
                                          (border +tileWidth )*coordinate[0] + border + barHeight))
                 
     def game_over(self, type_): #type = 'defeat' or 'victory'
+        self.gameOverType = type_
         print(type_)
         self.gameOver = True
         self.gameTime = (pygame.time.get_ticks() - self.startTicks)/1000
