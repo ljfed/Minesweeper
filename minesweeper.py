@@ -211,7 +211,7 @@ class Game():
                     if self.grid[row+sRow, column+sCol] == 9:
                         self.game_over('defeat')
                         self.clickedMines.append([row+sRow, column+sCol])
-                        
+                        continue
                     self.revealGrid[row+sRow, column+sCol] = 1
                     self.numTilesRevealed += 1
                     if self.grid[row+sRow, column+sCol] == 0:
