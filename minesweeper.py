@@ -101,6 +101,7 @@ class Game():
     def reset(self):
         self.grid = np.zeros((gridHeight, gridWidth))
         self.revealGrid = np.zeros((gridHeight, gridWidth)) #0=hidden, 1=revealed, 2=flag
+        self.flagGrid = np.zeros((gridHeight, gridWidth)) #1=flag, 0=no flag, used in middle_click()
         self.flagCounter = self.numMines
         self.leftClickCounter = 0
         self.startTicks = pygame.time.get_ticks()
@@ -179,7 +180,6 @@ class Game():
                 
     def game_over(self, type_): #type = 'defeat' or 'victory'
         self.gameOverType = type_
-        print(type_)
         self.gameOver = True
         self.gameTime = (pygame.time.get_ticks() - self.startTicks)/1000
         self.timerSeconds = self.gameTime
@@ -211,6 +211,7 @@ class Game():
                     if self.grid[row+sRow, column+sCol] == 9:
                         self.game_over('defeat')
                         self.clickedMines.append([row+sRow, column+sCol])
+                        
                     self.revealGrid[row+sRow, column+sCol] = 1
                     self.numTilesRevealed += 1
                     if self.grid[row+sRow, column+sCol] == 0:
@@ -247,37 +248,28 @@ class Game():
             self.game_over('victory')
 
     def left_click(self):
-        print('Left Click At: {}, {}'.format(self.row, self.column)) 
         if self.leftClickCounter == 0: #first click
             self.generate_board()
             self.reveal()
         else:
             self.reveal()
         self.leftClickCounter += 1
-        print(self.numTilesRevealed)
             
     def right_click(self):
-        print('Right Click At: {}, {}'.format(self.row, self.column))
         if self.revealGrid[self.row, self.column] == 2:
             self.revealGrid[self.row, self.column] = 0
+            self.flagGrid[self.row, self.column] = 0
             self.flagCounter += 1
         elif self.revealGrid[self.row, self.column] == 0:
             self.revealGrid[self.row, self.column] = 2
+            self.flagGrid[self.row, self.column] = 1
             self.flagCounter -= 1
         
     def middle_click(self):
-        print('Middle Click At: {}, {}'.format(self.row, self.column))
         #make sure coordinaet is revealed and no point doing anything if coordinate is a 0
         if self.revealGrid[self.row, self.column] == 1 \
         and self.grid[self.row, self.column] != 0:
-            flagGrid = np.zeros((gridHeight, gridWidth))
-            #grid with 1 representing flag and 0 anything else
-            for row_ in range(gridHeight):
-                for column_ in range(gridWidth):
-                    if self.revealGrid[row_, column_] == 2:
-                        flagGrid[row_, column_] = 1
-                        
-            conv = signal.convolve(flagGrid, np.ones((3,3)), mode='same')
+            conv = signal.convolve(self.flagGrid, np.ones((3,3)), mode='same')
             #make sure number of flags surrounding is number on square
             if conv[self.row, self.column] == self.grid[self.row, self.column]:
                 self.reveal_surrounding(self.row, self.column)      
