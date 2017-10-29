@@ -9,7 +9,7 @@ import pygame
 import numpy as np
 from scipy import signal
 
-gameMode = 'b' #b=beginner, i=intermediate, e=expert, c=custom
+gameMode = 'c' #b=beginner, i=intermediate, e=expert, c=custom
 if gameMode == 'e':
     gridWidth = 30
     gridHeight = 16
@@ -27,8 +27,8 @@ elif gameMode == 'c':
     "sys.getrecursionlimit()" surrounding zeros at once. Adjusting mine density 
     may help. Also program is probably not optimised enough to handle large boards'''
     gridWidth = 100
-    gridHeight = 20
-    numMines = 350  
+    gridHeight = 30
+    numMines = 500  
 
 pygame.init()
 
@@ -108,8 +108,7 @@ class Game():
         self.numTilesRevealed = 0
         self.gameOver = False
         self.gameOverType = ''
-        self.face = faces['safe']
-        self.clickedMines = []
+        self.render_start()
         
     def generate_board(self):
 #        generate board --> first click can't be a mine
@@ -136,70 +135,57 @@ class Game():
         conv[self.grid] = 9
         self.grid = conv.astype(np.int32)    
         
-    def render(self):
-        if not self.gameOver:
-            self.timerSeconds = (pygame.time.get_ticks() - self.startTicks)/1000
-        gameDisplay.fill(black) 
+    def render_square(self, row, column, image=None):
+        if image:
+            gameDisplay.blit(image, ((border + tileWidth)*column + border,
+                                     (border +tileWidth )*row + border + barHeight))
+        else:
+            tileX = (border + tileWidth) * column + border
+            tileY = (border + tileWidth) * row + border + barHeight
+            pygame.draw.rect(gameDisplay, white, (tileX, tileY, 
+                                                  tileWidth, tileWidth))
+    
+    def render_start(self):
+        gameDisplay.fill(black)
         pygame.draw.rect(gameDisplay, gray, (0, 0, displayWidth, barHeight))
-        gameDisplay.blit(self.face, faceRect) 
+        self.render_face('safe')
         message_to_screen('{}'.format(self.flagCounter), red, 5, 5, 'topleft')
-        message_to_screen('{:.0f}'.format(self.timerSeconds),red, 
-                          displayWidth-5, 5, 'topright')
-                
         for row in range(gridHeight):
             for column in range(gridWidth):
-                if self.revealGrid[row, column] == 1:
-                    image = img[self.grid[row, column]]
-                elif self.revealGrid[row, column] == 2:
-                    #coordinate is flagged
-                    image = img['flag']
-                else:
-                    #coordinate not revealed
-                    tileX = (border + tileWidth) * column + border
-                    tileY = (border + tileWidth) * row + border + barHeight
-                
-                    pygame.draw.rect(gameDisplay, white, (tileX, tileY, 
-                                                      tileWidth, tileWidth))
-                    continue
+                self.render_square(row, column)
+        
+    def render_face(self, face):
+        self.face = faces[face]
+        gameDisplay.blit(self.face, faceRect)
+    
+    def render_time(self):
+        if not self.gameOver:
+            pygame.draw.rect(gameDisplay, gray, (displayWidth-30, 5,
+                                                 30, 30))
+            self.timerSeconds = (pygame.time.get_ticks() - self.startTicks)/1000
+            message_to_screen('{:.0f}'.format(self.timerSeconds),red, 
+                              displayWidth-5, 5, 'topright')        
                     
-                gameDisplay.blit(image, ((border + tileWidth)*column + border,
-                                         (border +tileWidth )*row + border + barHeight))
-        if self.gameOver and self.gameOverType == 'defeat':
-            for coordinate in self.hiddenMines:
-                image = img[9]
-                gameDisplay.blit(image, ((border + tileWidth)*coordinate[1] + border,
-                                         (border +tileWidth )*coordinate[0] + border + barHeight))
-            for coordinate in self.wrongFlagCoordinates:
-                image = img['wrongFlag']
-                gameDisplay.blit(image, ((border + tileWidth)*coordinate[1] + border,
-                                         (border +tileWidth )*coordinate[0] + border + barHeight))
-            for coordinate in self.clickedMines:
-                image = img['mineExplode']
-                gameDisplay.blit(image, ((border + tileWidth)*coordinate[1] + border,
-                                         (border +tileWidth )*coordinate[0] + border + barHeight))
-                
     def game_over(self, type_): #type = 'defeat' or 'victory'
         self.gameOverType = type_
         self.gameOver = True
         self.gameTime = (pygame.time.get_ticks() - self.startTicks)/1000
-        self.timerSeconds = self.gameTime
+#        self.timerSeconds = self.gameTime
         if type_ == 'victory':
-            self.face = faces['victory']
+            self.render_face('victory')
             self.reveal_everything()            
             
         elif type_ == 'defeat':
             self.revealGrid[self.row, self.column] = 1
-            self.face = faces['defeat']
+            self.render_square(self.row, self.column, img[self.grid[self.row, self.column]])
+            self.render_face('defeat')
             
-            self.wrongFlagCoordinates = []
-            self.hiddenMines = []
             for row in range(gridHeight):
                 for column in range(gridWidth):
                     if self.grid[row, column] != 9 and self.revealGrid[row, column] == 2:
-                        self.wrongFlagCoordinates.append([row, column])
+                        self.render_square(row, column, img['wrongFlag'])
                     elif self.grid[row, column] == 9 and self.revealGrid[row, column] !=2:
-                        self.hiddenMines.append([row, column])
-            
+                        self.render_square(row, column, img[9])
             
     def reveal_surrounding(self, row, column):
         for sCol in range(-1, 2):
@@ -210,9 +196,10 @@ class Game():
                 if self.revealGrid[row+sRow, column+sCol] == 0:
                     if self.grid[row+sRow, column+sCol] == 9:
                         self.game_over('defeat')
-                        self.clickedMines.append([row+sRow, column+sCol])
+                        self.render_square(row+sRow, column+sCol, img['mineExplode'])
                         continue
                     self.revealGrid[row+sRow, column+sCol] = 1
+                    self.render_square(row+sRow, column+sCol, img[self.grid[row+sRow, column+sCol]])
                     self.numTilesRevealed += 1
                     if self.grid[row+sRow, column+sCol] == 0:
                         self.reveal_surrounding(row+sRow, column+sCol)
@@ -223,13 +210,14 @@ class Game():
         if self.revealGrid[self.row, self.column] == 0: #make sure tile isn't a flag and isn't revealed
             if self.grid[self.row, self.column] == 9:
                 self.game_over('defeat')
-                self.clickedMines.append([self.row, self.column])
+                self.render_square(self.row, self.column, img['mineExplode'])
             elif self.grid[self.row, self.column] == 0:
 #                reveal all surrounding zeros
                 self.reveal_surrounding(self.row, self.column)
                     
             else:
                 self.revealGrid[self.row, self.column] = 1
+                self.render_square(self.row, self.column, img[self.grid[self.row, self.column]])
                 self.numTilesRevealed += 1
             
         self.check_victory()
@@ -239,8 +227,10 @@ class Game():
             for column in range(gridWidth):
                 if self.grid[row, column] == 9:
                     self.revealGrid[row, column] = 2
+                    self.render_square(row, column, img['flag'])
                 else:
                     self.revealGrid[row, column] = 1
+                    self.render_square(row, column, img[self.grid[row, column]])
         self.flagCounter = 0
         
     def check_victory(self):
@@ -260,10 +250,13 @@ class Game():
             self.revealGrid[self.row, self.column] = 0
             self.flagGrid[self.row, self.column] = 0
             self.flagCounter += 1
+            self.render_square(self.row, self.column)
         elif self.revealGrid[self.row, self.column] == 0:
             self.revealGrid[self.row, self.column] = 2
             self.flagGrid[self.row, self.column] = 1
             self.flagCounter -= 1
+            self.render_square(self.row, self.column, img['flag'])
+        message_to_screen('{}'.format(self.flagCounter), red, 5, 5, 'topleft')
         
     def middle_click(self):
         #make sure coordinaet is revealed and no point doing anything if coordinate is a 0
@@ -331,12 +324,11 @@ class Game():
                 if not self.gameOver:            
                     if 1 in keysDown:
                         if not faceRect.collidepoint(pos):
-                            self.face = faces['suspense']
+                            self.render_face('suspense')
                     else:
-                        self.face = faces['safe']
+                        self.render_face('safe')
                             
-                            
-            self.render()
+            self.render_time()
             pygame.display.update()
             clock.tick(fps) #frames per second
         
