@@ -9,7 +9,7 @@ import pygame
 import numpy as np
 from scipy import signal
 
-gameMode = 'c' #b=beginner, i=intermediate, e=expert, c=custom
+gameMode = 'e' #b=beginner, i=intermediate, e=expert, c=custom
 if gameMode == 'e':
     gridWidth = 30
     gridHeight = 16
@@ -23,12 +23,12 @@ elif gameMode == 'b':
     gridHeight = 8
     numMines = 10
 elif gameMode == 'c': 
-    '''large values can generate a recursion error if trying to reveal more than 
-    "sys.getrecursionlimit()" surrounding zeros at once. Adjusting mine density 
-    may help. Also program is probably not optimised enough to handle large boards'''
-    gridWidth = 100
-    gridHeight = 30
-    numMines = 500  
+    '''large values can generate a recursion error if trying to reveal more 
+    than "sys.getrecursionlimit()" (default=1000) surrounding zeros at once. 
+    Adjusting mine density may help.'''
+    gridWidth = 50
+    gridHeight = 40
+    numMines = 380  
 
 pygame.init()
 
@@ -131,9 +131,11 @@ class Game():
 #        np.random.choice(random numbers chosen from elements of this input, num replacements to make, false makes numbers different each time)
          
         conv = signal.convolve(self.grid, np.ones((3,3)), mode='same')
+        conv = np.round(conv).astype(np.int) #solves issues on larger boards
         self.grid = self.grid.astype(np.bool)
         conv[self.grid] = 9
-        self.grid = conv.astype(np.int32)    
+        self.grid = conv#.astype(np.int32) 
+        
         
     def render_square(self, row, column, image=None):
         if image:
@@ -160,11 +162,11 @@ class Game():
     
     def render_time(self):
         if not self.gameOver:
-            pygame.draw.rect(gameDisplay, gray, (displayWidth-30, 5,
-                                                 30, 30))
             self.timerSeconds = (pygame.time.get_ticks() - self.startTicks)/1000
-            message_to_screen('{:.0f}'.format(self.timerSeconds),red, 
-                              displayWidth-5, 5, 'topright')        
+            if self.timerSeconds <= 999:
+                pygame.draw.rect(gameDisplay, gray, (displayWidth-40, 5, 40, 20))
+                message_to_screen('{:.0f}'.format(self.timerSeconds),red, 
+                                  displayWidth-5, 5, 'topright')              
                     
     def game_over(self, type_): #type = 'defeat' or 'victory'
         self.gameOverType = type_
@@ -256,13 +258,16 @@ class Game():
             self.flagGrid[self.row, self.column] = 1
             self.flagCounter -= 1
             self.render_square(self.row, self.column, img['flag'])
+        pygame.draw.rect(gameDisplay, gray, (5, 5, 40, 20))
         message_to_screen('{}'.format(self.flagCounter), red, 5, 5, 'topleft')
         
     def middle_click(self):
+        
         #make sure coordinaet is revealed and no point doing anything if coordinate is a 0
         if self.revealGrid[self.row, self.column] == 1 \
         and self.grid[self.row, self.column] != 0:
             conv = signal.convolve(self.flagGrid, np.ones((3,3)), mode='same')
+            conv = np.round(conv).astype(np.int)
             #make sure number of flags surrounding is number on square
             if conv[self.row, self.column] == self.grid[self.row, self.column]:
                 self.reveal_surrounding(self.row, self.column)      
@@ -332,8 +337,10 @@ class Game():
             pygame.display.update()
             clock.tick(fps) #frames per second
         
+        pygame.display.quit()
         pygame.quit()
         quit()
+#        raise SystemExit
         
 if __name__ == '__main__':     
     Game()
