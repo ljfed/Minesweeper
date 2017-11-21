@@ -1,15 +1,8 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Aug  3 10:07:28 2017
-
-@author: Laurence
-"""
-
 import pygame
 import numpy as np
 from scipy import signal
 
-gameMode = 'e' #b=beginner, i=intermediate, e=expert, c=custom
+gameMode = 'i' #b=beginner, i=intermediate, e=expert, c=custom
 if gameMode == 'e':
     gridWidth = 30
     gridHeight = 16
@@ -25,7 +18,7 @@ elif gameMode == 'b':
 elif gameMode == 'c': 
     '''large values can generate a recursion error if trying to reveal more 
     than "sys.getrecursionlimit()" (default=1000) surrounding zeros at once. 
-    Adjusting mine density may help.'''
+    Adjusting mine density should help.'''
     gridWidth = 50
     gridHeight = 40
     numMines = 380  
@@ -109,11 +102,11 @@ class Game():
         self.gameOver = False
         self.gameOverType = ''
         self.render_start()
+        self.chordInitiated = False
         
     def generate_board(self):
-#        generate board --> first click can't be a mine
         linearSelection = self.column + self.row*gridWidth #convert 2d coordinates into linear coordinate
-        
+        #np.random.choice(random numbers chosen from elements of this input, num replacements to make, false makes numbers different each time)
         values = np.random.choice(range(gridWidth*gridHeight), self.numMines, replace=False)
 #        make sure first click isn't a mine
         if linearSelection in values:
@@ -125,17 +118,14 @@ class Game():
             values.append(np.random.choice(freeTiles))
             values.remove(linearSelection)
         
-#       np.put(self.grid, np.random.choice(range(gridWidth*gridHeight), self.numMines, replace=False), 1)
-        np.put(self.grid, values, 1)
 #        np.put(input grid, [locations to change - can reference as if grid was a 1 dimensional array], number to change location to)
-#        np.random.choice(random numbers chosen from elements of this input, num replacements to make, false makes numbers different each time)
+        np.put(self.grid, values, 1)
          
         conv = signal.convolve(self.grid, np.ones((3,3)), mode='same')
-        conv = np.round(conv).astype(np.int) #solves issues on larger boards
+        conv = np.round(conv).astype(np.int)
         self.grid = self.grid.astype(np.bool)
         conv[self.grid] = 9
-        self.grid = conv#.astype(np.int32) 
-        
+        self.grid = conv
         
     def render_square(self, row, column, image=None):
         if image:
@@ -262,7 +252,6 @@ class Game():
         message_to_screen('{}'.format(self.flagCounter), red, 5, 5, 'topleft')
         
     def middle_click(self):
-        
         #make sure coordinaet is revealed and no point doing anything if coordinate is a 0
         if self.revealGrid[self.row, self.column] == 1 \
         and self.grid[self.row, self.column] != 0:
@@ -283,7 +272,7 @@ class Game():
 
     def game_loop(self):
         while not self.gameExit:
-#            EVENT AND INPYT HANDLING
+#            EVENT AND INPUT HANDLING
             for event in pygame.event.get():           
                 if event.type == pygame.QUIT:
                     self.gameExit = True
@@ -295,36 +284,43 @@ class Game():
                         del keysDown[event.key]
                     if event.key == pygame.K_F2:
                         self.reset()
-                    if event.key == pygame.K_r:
-                        self.reveal_everything()
+#                    if event.key == pygame.K_r:
+#                        self.reveal_everything()
                         
                 if event.type == pygame.MOUSEBUTTONDOWN and not self.gameOver:
                     keysDown[event.button] = True
                     pos = pygame.mouse.get_pos()
-                    if event.button == 3 and pos[1] >= barHeight:
+                        
+                    if 1 in keysDown and 3 in keysDown:
+                        self.chordInitiated = True
+                    if event.button == 3 and pos[1] >= barHeight and not self.chordInitiated:
                         self.real_position_to_coordinates(pos)
                         self.right_click()
                 
                 if event.type == pygame.MOUSEBUTTONUP:
                     button = event.button #left click = 1, middle = 2 right click = 3
                     pos = pygame.mouse.get_pos()
+                    
+                    if button in keysDown:   
+                        del keysDown[button]
                         
                     if faceRect.collidepoint(pos) and button ==1:
                         self.reset()
                     if pos[1] >= barHeight and not self.gameOver:
                         self.real_position_to_coordinates(pos)
                         
-#                        to detect both left and right detect 2 held down then trigger when one releases
-                        if 1 in keysDown and 3 in keysDown:
-                            if button == 1 or button == 3:
+                        if not self.chordInitiated:
+                            if button == 2:
                                 self.middle_click()
-                        elif button == 2:
-                            self.middle_click()
-                        elif button == 1:
-                            self.left_click()
-                    
-                    if button in keysDown:   
-                            del keysDown[button]
+                            elif button == 1:
+                                self.left_click()
+                                
+                        if 1 not in keysDown and 3 not in keysDown:
+                            self.chordInitiated = False
+                        
+                        if self.chordInitiated:
+                            if button == 1 or button == 2 or button == 3:
+                                self.middle_click()
                             
                 if not self.gameOver:            
                     if 1 in keysDown:
