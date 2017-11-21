@@ -97,10 +97,10 @@ class Game():
         self.flagGrid = np.zeros((gridHeight, gridWidth)) #1=flag, 0=no flag, used in middle_click()
         self.flagCounter = self.numMines
         self.leftClickCounter = 0
-        self.startTicks = pygame.time.get_ticks()
         self.numTilesRevealed = 0
         self.gameOver = False
         self.gameOverType = ''
+        self.startTicks = False
         self.render_start()
         self.chordInitiated = False
         
@@ -152,17 +152,20 @@ class Game():
     
     def render_time(self):
         if not self.gameOver:
-            self.timerSeconds = (pygame.time.get_ticks() - self.startTicks)/1000
+            if self.startTicks:
+                self.timerSeconds = (pygame.time.get_ticks() - self.startTicks)/1000
+            else:
+                self.timerSeconds = 0
             if self.timerSeconds <= 999:
                 pygame.draw.rect(gameDisplay, gray, (displayWidth-40, 5, 40, 20))
                 message_to_screen('{:.0f}'.format(self.timerSeconds),red, 
                                   displayWidth-5, 5, 'topright')              
                     
-    def game_over(self, type_): #type = 'defeat' or 'victory'
+    def game_over(self, type_): #type_ = 'defeat' or 'victory'
         self.gameOverType = type_
         self.gameOver = True
         self.gameTime = (pygame.time.get_ticks() - self.startTicks)/1000
-#        self.timerSeconds = self.gameTime
+
         if type_ == 'victory':
             self.render_face('victory')
             self.reveal_everything()            
@@ -232,6 +235,7 @@ class Game():
     def left_click(self):
         if self.leftClickCounter == 0: #first click
             self.generate_board()
+            self.startTicks = pygame.time.get_ticks()
             self.reveal()
         else:
             self.reveal()
