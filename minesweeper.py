@@ -2,7 +2,7 @@ import pygame
 import numpy as np
 from scipy import signal
 
-gameMode = 'i' #b=beginner, i=intermediate, e=expert, c=custom
+gameMode = 'e' #b=beginner, i=intermediate, e=expert, c=custom
 if gameMode == 'e':
     gridWidth = 30
     gridHeight = 16
@@ -18,25 +18,14 @@ elif gameMode == 'b':
 elif gameMode == 'c': 
     '''large values can generate a recursion error if trying to reveal more 
     than "sys.getrecursionlimit()" (default=1000) surrounding zeros at once. 
-    Adjusting mine density should help.'''
+    Increasing mine density should help prevent this.'''
     gridWidth = 50
     gridHeight = 40
     numMines = 380  
 
 pygame.init()
 
-font = pygame.font.SysFont(None, 30) #30 = font size
-
-def message_to_screen(text, color, x, y, align): #align: topleft, topright, center
-    textSurface = font.render(text, True, color)
-    textRect = textSurface.get_rect()
-    if align == 'center':
-        textRect.center = (x), (y)
-    elif align == 'topleft':
-        textRect.topleft = (x), (y)
-    elif align == 'topright':
-        textRect.topright = (x), (y)
-    gameDisplay.blit(textSurface, textRect) 
+font = pygame.font.SysFont(None, 30)
 
 barHeight = 40
 
@@ -46,8 +35,8 @@ border = 1
 displayWidth = tileWidth*gridWidth + border*(gridWidth+1)
 displayHeight = tileWidth*gridHeight + border*(gridHeight+1) + barHeight
 
-gameDisplay = pygame.display.set_mode((displayWidth, displayHeight)) #screen size
-pygame.display.set_caption('Minesweeper') #Window Title
+gameDisplay = pygame.display.set_mode((displayWidth, displayHeight))
+pygame.display.set_caption('Minesweeper')
 
 clock = pygame.time.Clock()
 fps = 60
@@ -76,8 +65,19 @@ faces = {'safe': pygame.image.load('img/safe.png').convert_alpha(),
          'suspense': pygame.image.load('img/suspense.png').convert_alpha(),
          'defeat': pygame.image.load('img/defeat.png').convert_alpha(),
          'victory': pygame.image.load('img/victory.png').convert_alpha()}
-faceRect = pygame.Rect((displayWidth/2 - 11, barHeight/2 - 11), (23, 23)) #11 is ~half width of image (which is 23)
+faceRect = pygame.Rect((displayWidth/2 - 11, barHeight/2 - 11), (23, 23))
 
+def message_to_screen(text, color, x, y, align):
+    textSurface = font.render(text, True, color)
+    textRect = textSurface.get_rect()
+    if align == 'center':
+        textRect.center = (x), (y)
+    elif align == 'topleft':
+        textRect.topleft = (x), (y)
+    elif align == 'topright':
+        textRect.topright = (x), (y)
+    gameDisplay.blit(textSurface, textRect) 
+    
 
 class Game():
     def __init__(self):
@@ -94,7 +94,7 @@ class Game():
     def reset(self):
         self.grid = np.zeros((gridHeight, gridWidth))
         self.revealGrid = np.zeros((gridHeight, gridWidth)) #0=hidden, 1=revealed, 2=flag
-        self.flagGrid = np.zeros((gridHeight, gridWidth)) #1=flag, 0=no flag, used in middle_click()
+        self.flagGrid = np.zeros((gridHeight, gridWidth)) #1=flag, 0=no flag
         self.flagCounter = self.numMines
         self.leftClickCounter = 0
         self.numTilesRevealed = 0
@@ -105,9 +105,11 @@ class Game():
         self.chordInitiated = False
         
     def generate_board(self):
-        linearSelection = self.column + self.row*gridWidth #convert 2d coordinates into linear coordinate
-        #np.random.choice(random numbers chosen from elements of this input, num replacements to make, false makes numbers different each time)
-        values = np.random.choice(range(gridWidth*gridHeight), self.numMines, replace=False)
+        #convert 2d coordinates into linear coordinate
+        linearSelection = self.column + self.row*gridWidth 
+        
+        values = np.random.choice(range(gridWidth*gridHeight), self.numMines, 
+                                  replace=False)
 #        make sure first click isn't a mine
         if linearSelection in values:
             values = list(values)
@@ -118,7 +120,6 @@ class Game():
             values.append(np.random.choice(freeTiles))
             values.remove(linearSelection)
         
-#        np.put(input grid, [locations to change - can reference as if grid was a 1 dimensional array], number to change location to)
         np.put(self.grid, values, 1)
          
         conv = signal.convolve(self.grid, np.ones((3,3)), mode='same')
@@ -172,14 +173,17 @@ class Game():
             
         elif type_ == 'defeat':
             self.revealGrid[self.row, self.column] = 1
-            self.render_square(self.row, self.column, img[self.grid[self.row, self.column]])
+            self.render_square(self.row, self.column, 
+                               img[self.grid[self.row, self.column]])
             self.render_face('defeat')
             
             for row in range(gridHeight):
                 for column in range(gridWidth):
-                    if self.grid[row, column] != 9 and self.revealGrid[row, column] == 2:
+                    if self.grid[row, column] != 9 \
+                    and self.revealGrid[row, column] == 2:
                         self.render_square(row, column, img['wrongFlag'])
-                    elif self.grid[row, column] == 9 and self.revealGrid[row, column] !=2:
+                    elif self.grid[row, column] == 9 \
+                    and self.revealGrid[row, column] !=2:
                         self.render_square(row, column, img[9])
             
     def reveal_surrounding(self, row, column):
@@ -191,10 +195,12 @@ class Game():
                 if self.revealGrid[row+sRow, column+sCol] == 0:
                     if self.grid[row+sRow, column+sCol] == 9:
                         self.game_over('defeat')
-                        self.render_square(row+sRow, column+sCol, img['mineExplode'])
+                        self.render_square(row+sRow, column+sCol, 
+                                           img['mineExplode'])
                         continue
                     self.revealGrid[row+sRow, column+sCol] = 1
-                    self.render_square(row+sRow, column+sCol, img[self.grid[row+sRow, column+sCol]])
+                    self.render_square(row+sRow, column+sCol, 
+                                       img[self.grid[row+sRow, column+sCol]])
                     self.numTilesRevealed += 1
                     if self.grid[row+sRow, column+sCol] == 0:
                         self.reveal_surrounding(row+sRow, column+sCol)
@@ -202,7 +208,8 @@ class Game():
         self.check_victory()
                                      
     def reveal(self):
-        if self.revealGrid[self.row, self.column] == 0: #make sure tile isn't a flag and isn't revealed
+        #make sure tile isn't a flag and isn't revealed
+        if self.revealGrid[self.row, self.column] == 0: 
             if self.grid[self.row, self.column] == 9:
                 self.game_over('defeat')
                 self.render_square(self.row, self.column, img['mineExplode'])
@@ -212,7 +219,8 @@ class Game():
                     
             else:
                 self.revealGrid[self.row, self.column] = 1
-                self.render_square(self.row, self.column, img[self.grid[self.row, self.column]])
+                self.render_square(self.row, self.column, 
+                                   img[self.grid[self.row, self.column]])
                 self.numTilesRevealed += 1
             
         self.check_victory()
@@ -233,7 +241,7 @@ class Game():
             self.game_over('victory')
 
     def left_click(self):
-        if self.leftClickCounter == 0: #first click
+        if self.leftClickCounter == 0:
             self.generate_board()
             self.startTicks = pygame.time.get_ticks()
             self.reveal()
@@ -256,7 +264,7 @@ class Game():
         message_to_screen('{}'.format(self.flagCounter), red, 5, 5, 'topleft')
         
     def middle_click(self):
-        #make sure coordinaet is revealed and no point doing anything if coordinate is a 0
+        #make sure coordinaet is revealed not a 0
         if self.revealGrid[self.row, self.column] == 1 \
         and self.grid[self.row, self.column] != 0:
             conv = signal.convolve(self.flagGrid, np.ones((3,3)), mode='same')
@@ -297,7 +305,8 @@ class Game():
                         
                     if 1 in keysDown and 3 in keysDown:
                         self.chordInitiated = True
-                    if event.button == 3 and pos[1] >= barHeight and not self.chordInitiated:
+                    if event.button == 3 and pos[1] >= barHeight \
+                    and not self.chordInitiated:
                         self.real_position_to_coordinates(pos)
                         self.right_click()
                 
@@ -335,7 +344,7 @@ class Game():
                             
             self.render_time()
             pygame.display.update()
-            clock.tick(fps) #frames per second
+            clock.tick(fps)
         
         pygame.display.quit()
         pygame.quit()
